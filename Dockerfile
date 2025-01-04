@@ -1,5 +1,5 @@
-# Update to the latest Playwright Docker image
-FROM mcr.microsoft.com/playwright:v1.49.1-focal
+# Use the official Playwright image from Docker Hub
+FROM ghcr.io/microsoft/playwright:v1.49.1-focal
 
 # Set the working directory
 WORKDIR /app
