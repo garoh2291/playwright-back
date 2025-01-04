@@ -1,5 +1,5 @@
-# Use the Playwright base image (always fetches the latest compatible version)
-FROM mcr.microsoft.com/playwright:latest
+# Use the specific Playwright image version recommended in the error message
+FROM mcr.microsoft.com/playwright:v1.49.1-jammy
 
 # Set the working directory
 WORKDIR /app
