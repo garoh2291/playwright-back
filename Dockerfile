@@ -1,5 +1,5 @@
-# Use the official Playwright Docker image with Node.js
-FROM mcr.microsoft.com/playwright:focal
+# Update to the latest Playwright Docker image
+FROM mcr.microsoft.com/playwright:v1.49.1-focal
 
 # Set the working directory
 WORKDIR /app
