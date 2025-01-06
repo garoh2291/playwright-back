@@ -11,7 +11,6 @@ const PORT = 3002;
 
 // AWS S3 Configuration
 const s3Client = new S3Client({ region: process.env.AWS_REGION });
-const bucketName = process.env.AWS_BUCKET_NAME;
 
 // Middleware to parse JSON request bodies
 app.use(express.json());
@@ -25,7 +24,11 @@ app.use(
 
 // POST route to take a screenshot
 app.post("/screenshot", async (req: Request, res: Response): Promise<void> => {
-  const { url } = req.body;
+  const { url, stage } = req.body;
+  const bucketName =
+    stage === "production"
+      ? process.env.AWS_BUCKET_NAME_PRODUCTION
+      : process.env.AWS_BUCKET_NAME;
 
   if (!url || typeof url !== "string") {
     res.status(400).json({
@@ -41,7 +44,7 @@ app.post("/screenshot", async (req: Request, res: Response): Promise<void> => {
     const page = await context.newPage();
 
     // Navigate to the given URL
-    await page.goto(url);
+    await page.goto(url, { waitUntil: "load" });
 
     // Take a screenshot
     const screenshotBuffer = await page.screenshot({ fullPage: true });
