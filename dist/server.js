@@ -22,7 +22,6 @@ const app = (0, express_1.default)();
 const PORT = 3002;
 // AWS S3 Configuration
 const s3Client = new client_s3_1.S3Client({ region: process.env.AWS_REGION });
-const bucketName = process.env.AWS_BUCKET_NAME;
 // Middleware to parse JSON request bodies
 app.use(express_1.default.json());
 app.use((0, cors_1.default)({
@@ -32,7 +31,11 @@ app.use((0, cors_1.default)({
 }));
 // POST route to take a screenshot
 app.post("/screenshot", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    const { url } = req.body;
+    const { url, stage } = req.body;
+    console.log("url", url, process.env.AWS_BUCKET_NAME_PRODUCTION, process.env.AWS_BUCKET_NAME, process.env.AWS_REGION);
+    const bucketName = stage === "production"
+        ? process.env.AWS_BUCKET_NAME_PRODUCTION
+        : process.env.AWS_BUCKET_NAME;
     if (!url || typeof url !== "string") {
         res.status(400).json({
             error: "URL is required in the request body and must be a string.",
@@ -45,7 +48,7 @@ app.post("/screenshot", (req, res) => __awaiter(void 0, void 0, void 0, function
         const context = yield browser.newContext();
         const page = yield context.newPage();
         // Navigate to the given URL
-        yield page.goto(url);
+        yield page.goto(url, { waitUntil: "load" });
         // Take a screenshot
         const screenshotBuffer = yield page.screenshot({ fullPage: true });
         // Close the browser
