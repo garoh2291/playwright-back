@@ -22,17 +22,14 @@ const app = (0, express_1.default)();
 const PORT = 3002;
 // AWS S3 Configuration
 const s3Client = new client_s3_1.S3Client({ region: process.env.AWS_REGION });
-// Middleware to parse JSON request bodies
 app.use(express_1.default.json());
 app.use((0, cors_1.default)({
-    origin: "*", // Allow all origins; restrict this to specific origins in production
-    methods: ["GET", "POST"], // Allowed HTTP methods
-    allowedHeaders: ["Content-Type", "Authorization"], // Allowed headers
+    origin: "*",
+    methods: ["GET", "POST"],
+    allowedHeaders: ["Content-Type", "Authorization"],
 }));
-// POST route to take a screenshot
 app.post("/screenshot", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const { url, stage } = req.body;
-    console.log("url", url, process.env.AWS_BUCKET_NAME_PRODUCTION, process.env.AWS_BUCKET_NAME, process.env.AWS_REGION);
     const bucketName = stage === "production"
         ? process.env.AWS_BUCKET_NAME_PRODUCTION
         : process.env.AWS_BUCKET_NAME;
@@ -43,31 +40,92 @@ app.post("/screenshot", (req, res) => __awaiter(void 0, void 0, void 0, function
         return;
     }
     try {
-        // Launch Playwright browser
-        const browser = yield playwright_1.chromium.launch({ headless: true });
-        const context = yield browser.newContext();
+        // Enhanced browser launch configuration
+        const browser = yield playwright_1.chromium.launch({
+            headless: true,
+            args: [
+                "--no-sandbox",
+                "--disable-setuid-sandbox",
+                "--disable-dev-shm-usage",
+                "--disable-accelerated-2d-canvas",
+                "--disable-gpu",
+                "--window-size=1920,1080",
+            ],
+        });
+        // Create a context with specific device and user agent
+        const context = yield browser.newContext({
+            viewport: { width: 1920, height: 1080 },
+            userAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+            deviceScaleFactor: 1,
+            isMobile: false,
+            hasTouch: false,
+            locale: "en-US",
+            timezoneId: "America/New_York",
+            permissions: ["geolocation"],
+            // Add common headers that regular browsers send
+            extraHTTPHeaders: {
+                "Accept-Language": "en-US,en;q=0.9",
+                Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
+                "Accept-Encoding": "gzip, deflate, br",
+                Connection: "keep-alive",
+            },
+        });
         const page = yield context.newPage();
-        // Navigate to the given URL
-        yield page.goto(url, { waitUntil: "load" });
-        // Take a screenshot
-        const screenshotBuffer = yield page.screenshot({ fullPage: true });
-        // Close the browser
+        // Intercept and handle specific types of requests
+        yield page.route("**/*", (route) => __awaiter(void 0, void 0, void 0, function* () {
+            const request = route.request();
+            // Skip unnecessary resources to improve performance
+            if (["image", "stylesheet", "font"].includes(request.resourceType())) {
+                yield route.continue();
+            }
+            else if (request.url().includes("captcha") ||
+                request.url().includes("challenge")) {
+                // Handle potential captcha/challenge pages
+                yield route.abort();
+            }
+            else {
+                yield route.continue();
+            }
+        }));
+        // Add common browser fingerprints
+        yield page.addInitScript(() => {
+            Object.defineProperty(navigator, "webdriver", { get: () => undefined });
+            Object.defineProperty(navigator, "plugins", {
+                get: () => [1, 2, 3, 4, 5],
+            });
+            Object.defineProperty(navigator, "languages", {
+                get: () => ["en-US", "en"],
+            });
+        });
+        // Navigate with extended timeout and options
+        yield page.goto(url, {
+            waitUntil: "networkidle",
+            timeout: 30000,
+        });
+        // Wait for the main content to load
+        yield page.waitForLoadState("domcontentloaded");
+        yield page.waitForTimeout(2000); // Additional wait to ensure dynamic content loads
+        // Take screenshot with specific options
+        const screenshotBuffer = yield page.screenshot({
+            fullPage: true,
+            type: "png",
+            quality: 100,
+            timeout: 30000,
+        });
         yield browser.close();
-        // Generate a unique file name for S3
+        // Generate unique file name and path
         const fileName = `screenshot-${Date.now()}.png`;
         const folder = "link-preview";
-        const filePath = `${folder}/${fileName}`; // Save in folder "link-preview"
-        // Upload the screenshot to S3
+        const filePath = `${folder}/${fileName}`;
+        // Upload to S3
         const uploadParams = {
             Bucket: bucketName,
-            Key: filePath, // Include folder name in the Key
+            Key: filePath,
             Body: screenshotBuffer,
             ContentType: "image/png",
         };
         yield s3Client.send(new client_s3_1.PutObjectCommand(uploadParams));
-        // Generate the public URL of the uploaded file (if the bucket allows public access)
         const fileUrl = `https://${bucketName}.s3.${process.env.AWS_REGION}.amazonaws.com/${filePath}`;
-        // Respond with the file URL
         res.json({
             message: "Screenshot saved successfully to S3 in /link-preview folder",
             fileUrl,
@@ -75,12 +133,12 @@ app.post("/screenshot", (req, res) => __awaiter(void 0, void 0, void 0, function
     }
     catch (error) {
         console.error("Error taking screenshot or uploading to S3:", error);
-        res
-            .status(500)
-            .json({ error: "Failed to take screenshot or upload to S3" });
+        res.status(500).json({
+            error: "Failed to take screenshot or upload to S3",
+            details: error instanceof Error ? error.message : "Unknown error",
+        });
     }
 }));
-// Start the server
 app.listen(PORT, () => {
     console.log(`Server is running on http://localhost:${PORT}`);
 });
