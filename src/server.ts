@@ -115,7 +115,7 @@ app.post("/screenshot", async (req: Request, res: Response): Promise<void> => {
     const screenshotBuffer = await page.screenshot({
       fullPage: true,
       type: "png",
-      quality: 100,
+      // quality: 100,
       timeout: 30000,
     });
 

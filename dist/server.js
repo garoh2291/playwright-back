@@ -109,7 +109,7 @@ app.post("/screenshot", (req, res) => __awaiter(void 0, void 0, void 0, function
         const screenshotBuffer = yield page.screenshot({
             fullPage: true,
             type: "png",
-            quality: 100,
+            // quality: 100,
             timeout: 30000,
         });
         yield browser.close();
