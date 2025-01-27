@@ -176,7 +176,14 @@ app.post("/screenshot", async (req: Request, res: Response): Promise<void> => {
 
     const previewUrl = `https://${bucketName}.s3.${process.env.AWS_REGION}.amazonaws.com/${filePath}`;
 
-    await axios.post("http://localhost:3001/api/sources/updateSourcePreview", {
+    const callbackUrl =
+      stage === "production"
+        ? "https://app.haibrid.ai"
+        : stage === "local"
+        ? "http://localhost:3001"
+        : "https://staging.app.haibrid.ai";
+
+    await axios.post(`${callbackUrl}/api/sources/updateSourcePreview`, {
       sourceId,
       previewUrl,
     });
