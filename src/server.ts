@@ -92,7 +92,7 @@ const optimizeLayout = async (page: Page): Promise<void> => {
 };
 
 app.post("/screenshot", async (req: Request, res: Response): Promise<void> => {
-  const { url, stage, sourceId, customTimeout = 2000 } = req.body;
+  const { url, stage, sourceId, callbackUrl, customTimeout = 2000 } = req.body;
 
   if (!url || typeof url !== "string") {
     res.status(400).json({ error: "URL is required and must be a string." });
@@ -175,13 +175,6 @@ app.post("/screenshot", async (req: Request, res: Response): Promise<void> => {
     );
 
     const previewUrl = `https://${bucketName}.s3.${process.env.AWS_REGION}.amazonaws.com/${filePath}`;
-
-    const callbackUrl =
-      stage === "production"
-        ? "https://app.haibrid.ai"
-        : stage === "local"
-        ? "http://localhost:3001"
-        : "https://staging.app.haibrid.ai";
 
     await axios.post(`${callbackUrl}/api/sources/updateSourcePreview`, {
       sourceId,
