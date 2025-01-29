@@ -99,10 +99,10 @@ app.post("/screenshot", async (req: Request, res: Response): Promise<void> => {
     return;
   }
 
-  if (!sourceId) {
-    res.status(400).json({ error: "sourceId is required." });
-    return;
-  }
+  // if (!sourceId) {
+  //   res.status(400).json({ error: "sourceId is required." });
+  //   return;
+  // }
 
   const bucketName =
     stage === "production"
@@ -176,12 +176,12 @@ app.post("/screenshot", async (req: Request, res: Response): Promise<void> => {
 
     const previewUrl = `https://${bucketName}.s3.${process.env.AWS_REGION}.amazonaws.com/${filePath}`;
 
-    await axios.post(`${callbackUrl}/api/sources/updateSourcePreview`, {
-      sourceId,
-      previewUrl,
-    });
+    // await axios.post(`${callbackUrl}/api/sources/updateSourcePreview`, {
+    //   sourceId,
+    //   previewUrl,
+    // });
 
-    res.status(200).send();
+    res.status(200).json({ previewUrl });
   } catch (error) {
     console.error("Screenshot error:", error);
     res.status(500).json({
