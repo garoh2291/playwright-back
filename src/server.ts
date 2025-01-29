@@ -61,6 +61,23 @@ const ELEMENTS_TO_REMOVE = [
 ];
 
 const removeDistractions = async (page: Page): Promise<void> => {
+  // First, try to click all close buttons
+  await page.evaluate(() => {
+    // Find all elements with data-testid="close-button" or data-testid containing "close"
+    const closeButtons = Array.from(
+      document.querySelectorAll("[data-testid]")
+    ).filter((el) => {
+      const testId = el.getAttribute("data-testid")?.toLowerCase() || "";
+      return testId === "close-button" || testId.includes("close");
+    });
+
+    // Click each close button
+    closeButtons.forEach((button) => {
+      (button as HTMLElement).click();
+    });
+  });
+
+  // Remove other distracting elements as before
   await page.evaluate((selectors: string[]) => {
     selectors.forEach((sel) => {
       document.querySelectorAll(sel).forEach((el) => el.remove());
