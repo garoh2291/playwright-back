@@ -192,10 +192,19 @@ app.post("/screenshot", async (req: Request, res: Response): Promise<void> => {
 
     const previewUrl = `https://${bucketName}.s3.${process.env.AWS_REGION}.amazonaws.com/${filePath}`;
 
-    await axios.post(`${callbackUrl}/api/sources/updateSourcePreview`, {
-      sourceId,
-      previewUrl,
-    });
+    await axios.post(
+      `${callbackUrl}/api/sources/updateSourcePreview`,
+      {
+        sourceId,
+        previewUrl,
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${process.env.TOKEN_SECRET || ""}`,
+          "Content-Type": "application/json",
+        },
+      }
+    );
 
     res.status(200).send();
   } catch (error) {
